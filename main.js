@@ -1,6 +1,6 @@
 "use strict";
 
-const { execSync } = require("child_process");
+const { exec } = require("child_process");
 const path = require("path");
 
 module.exports = {
@@ -13,34 +13,39 @@ module.exports = {
 };
 
 function onBeforeBuildFinish(options, callback) {
-    options.bundles.forEach((bundle) => {
-        let assets = bundle.buildResults.getAssetUuids();
-        for (let i = 0; i < assets.length; ++i) {
-            const file = bundle.buildResults.getNativeAssetPath(assets[i]);
-            if (file.endsWith(".png")) {
-                const cmd = `${path.join(
-                    __dirname,
-                    "pngquant.exe"
-                )} --force --ext .png --strip --skip-if-larger ${file}`;
-                try {
-                    execSync(cmd);
-                    Editor.success("pngquant: " + file);
-                } catch (error) {
-                    if (error.status !== 98) {
-                        Editor.warn(error);
-                    }
-                }
-            } else if (file.endsWith(".jpg")) {
-                const cmd = `${path.join(__dirname, "jpegtran.exe")} -optimize -progressive -outfile ${file} ${file}`;
-                try {
-                    execSync(cmd);
-                    Editor.success("jpegtran: " + file);
-                } catch (error) {
-                    Editor.warn(error);
-                }
-            }
-        }
-    });
+    if (options.buildResults) {
+        processBuildResult(options.buildResults, callback);
+    }
+    if (options.bundles) {
+        options.bundles.forEach((bundle) => processBuildResult(bundle.buildResults, callback));
+    }
+}
 
-    callback();
+function processBuildResult(buildResults, callback) {
+    let assets = buildResults.getAssetUuids();
+    for (let i = 0; i < assets.length; ++i) {
+        const file = buildResults.getNativeAssetPath(assets[i]);
+        if (file.endsWith(".png")) {
+            const cmd = `${path.join(__dirname, "pngquant.exe")} --force --ext .png --strip --skip-if-larger ${file}`;
+            exec(cmd, (err) => {
+                if (err && err.code !== 98) {
+                    Editor.warn(err);
+                } else {
+                    Editor.success("pngquant: " + file);
+                }
+                callback();
+            });
+            Editor.success("pngquant: " + file);
+        } else if (file.endsWith(".jpg")) {
+            const cmd = `${path.join(__dirname, "jpegtran.exe")} -optimize -progressive -outfile ${file} ${file}`;
+            exec(cmd, (err) => {
+                if (err) {
+                    Editor.warn(err);
+                } else {
+                    Editor.success("jpegtran: " + file);
+                }
+                callback();
+            });
+        }
+    }
 }
