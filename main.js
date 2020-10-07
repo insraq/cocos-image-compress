@@ -15,17 +15,19 @@ module.exports = {
 function onBeforeBuildFinish(options, callback) {
     if (options.buildResults) {
         processBuildResult(options.buildResults, callback);
-    }
-    if (options.bundles) {
+    } else if (options.bundles) {
         options.bundles.forEach((bundle) => processBuildResult(bundle.buildResults, callback));
     }
 }
+
+let count = 0;
 
 function processBuildResult(buildResults, callback) {
     let assets = buildResults.getAssetUuids();
     for (let i = 0; i < assets.length; ++i) {
         const file = buildResults.getNativeAssetPath(assets[i]);
         if (file.endsWith(".png")) {
+            count++;
             const cmd = `${path.join(__dirname, "pngquant.exe")} --force --ext .png --strip --skip-if-larger ${file}`;
             exec(cmd, (err) => {
                 if (err && err.code !== 98) {
@@ -33,10 +35,13 @@ function processBuildResult(buildResults, callback) {
                 } else {
                     Editor.success("pngquant: " + file);
                 }
-                callback();
+                if (--count === 0) {
+                    callback();
+                }
             });
             Editor.success("pngquant: " + file);
         } else if (file.endsWith(".jpg")) {
+            count++;
             const cmd = `${path.join(__dirname, "jpegtran.exe")} -optimize -progressive -outfile ${file} ${file}`;
             exec(cmd, (err) => {
                 if (err) {
@@ -44,7 +49,9 @@ function processBuildResult(buildResults, callback) {
                 } else {
                     Editor.success("jpegtran: " + file);
                 }
-                callback();
+                if (--count === 0) {
+                    callback();
+                }
             });
         }
     }
