@@ -40,7 +40,7 @@ function processBuildResult(buildResults, callback) {
                 }
             });
             Editor.success("pngquant: " + file);
-        } else if (file.endsWith(".jpg")) {
+        } else if (file.endsWith(".jpg") || file.endsWith(".jpeg")) {
             count++;
             const cmd = `${path.join(__dirname, "jpegtran.exe")} -optimize -progressive -outfile ${file} ${file}`;
             exec(cmd, (err) => {
